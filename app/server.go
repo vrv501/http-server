@@ -2,14 +2,10 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
-	"io"
-	"strings"
-
-	// Uncomment this block to pass the first stage
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -29,7 +25,7 @@ func main() {
 	for {
 		conn, err = l.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
+			fmt.Println("Error accepting connection:", err.Error())
 			continue
 		}
 
@@ -50,32 +46,42 @@ func handleConnection(conn net.Conn) {
 		err  error
 	)
 
-	line, _, err = reader.ReadLine()
+	/*
+		read request metdata. metadata has following info:
+		http method
+		path
+		http version
+	*/
+	line, _, err = reader.ReadLine() //reads until \r\n or \n is encountered
 	if err != nil {
-		if errors.Is(err, io.EOF) {
-			return
-		}
 		fmt.Println(err)
 		return
 	}
 
-	req := strings.Split(string(line), " ")
-	var resp string
+	var (
+		resp string
+		path string
+	)
+	req := strings.Split(string(line), " ") // metadata is seperated by white-space
+	if len(req) > 1 {
+		path = req[1]
+	}
 
-	path := req[1]
 	if path == "/" {
 		resp = createHTTPResponse(200, map[string]string{}, "")
-	} else if strings.HasPrefix(path, "/echo/") {
-		subPath, _ := strings.CutPrefix(path, "/echo/")
-
-		resp = createHTTPResponse(200, map[string]string{"Content-Type": "text/plain",
-			"Content-Length": fmt.Sprintf("%d", len(subPath))}, subPath)
-	} else if strings.HasSuffix(path, "/user-agent") {
+	} else if subPath, hasPrefix := strings.CutPrefix(path, "/echo/"); hasPrefix { // /echo/{str} should return str as response
+		resp = createHTTPResponse(200, map[string]string{
+			"Content-Type":   "text/plain",
+			"Content-Length": fmt.Sprintf("%d", len(subPath))},
+			subPath)
+	} else if strings.HasSuffix(path, "/user-agent") { // /user-agent should return header-value of User-Agent as response
 		var (
 			userAgent   string
 			prefixFound bool
 			lineStr     string
 		)
+
+		// each header is of format: key: value\r\n
 		for {
 			line, _, err = reader.ReadLine()
 			if err != nil {
@@ -84,7 +90,7 @@ func handleConnection(conn net.Conn) {
 			}
 
 			lineStr = string(line)
-			if lineStr == "" {
+			if lineStr == "" { // when we have read all-lines, ReadLine returns empty-line
 				break
 			}
 			userAgent, prefixFound = strings.CutPrefix(lineStr, "User-Agent: ")
@@ -96,8 +102,10 @@ func handleConnection(conn net.Conn) {
 		if userAgent == "" {
 			resp = createHTTPResponse(404, map[string]string{}, "")
 		} else {
-			resp = createHTTPResponse(200, map[string]string{"Content-Type": "text/plain",
-				"Content-Length": fmt.Sprintf("%d", len(userAgent))}, userAgent)
+			resp = createHTTPResponse(200, map[string]string{
+				"Content-Type":   "text/plain",
+				"Content-Length": fmt.Sprintf("%d", len(userAgent))},
+				userAgent)
 		}
 	} else {
 		resp = createHTTPResponse(404, map[string]string{}, "")
@@ -105,13 +113,13 @@ func handleConnection(conn net.Conn) {
 
 	_, err = writer.WriteString(resp)
 	if err != nil {
-		fmt.Println("Error writing stringResp: ", err.Error())
+		fmt.Println("Error writing stringResp:", err.Error())
 		return
 	}
 
 	err = writer.Flush()
 	if err != nil {
-		fmt.Println("Error writing to connection: ", err.Error())
+		fmt.Println("Error writing to connection:", err.Error())
 		return
 	}
 }
