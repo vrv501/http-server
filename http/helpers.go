@@ -13,10 +13,10 @@ func CreateErrResponse(err error) string {
 	return CreateHTTPResponse(500, map[string]string{
 		ContentType:   PlainEncoding,
 		ContentLength: fmt.Sprintf("%d", len(errMsg))},
-		[]byte(errMsg))
+		errMsg)
 }
 
-func CreateHTTPResponse(statusCode int, headers map[string]string, requestBody []byte) string {
+func CreateHTTPResponse(statusCode int, headers map[string]string, requestBody string) string {
 
 	var headerStr strings.Builder
 	for k, v := range headers {
@@ -40,7 +40,7 @@ func CreateHTTPResponse(statusCode int, headers map[string]string, requestBody [
 		statusCodeStr = "Internal Server Error"
 	}
 
-	return fmt.Sprintf("HTTP/1.1 %d %s\r\n%s\r\n%v", statusCode, statusCodeStr, headerStr.String(), requestBody)
+	return fmt.Sprintf("HTTP/1.1 %d %s\r\n%s\r\n%s", statusCode, statusCodeStr, headerStr.String(), requestBody)
 }
 
 func readReqHeaders(reader *bufio.Reader) (map[string]string, error) {

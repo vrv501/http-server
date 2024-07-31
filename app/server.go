@@ -82,7 +82,7 @@ func handleConnection(conn net.Conn) {
 		resp = http.CreateHTTPResponse(400, map[string]string{
 			http.ContentType:   http.PlainEncoding,
 			http.ContentLength: fmt.Sprintf("%d", len(errMsg))},
-			[]byte(errMsg))
+			errMsg)
 		sendResponse(writer, resp)
 		return
 	}
@@ -97,7 +97,7 @@ func handleConnection(conn net.Conn) {
 		resp = http.CreateHTTPResponse(400, map[string]string{
 			http.ContentType:   http.PlainEncoding,
 			http.ContentLength: fmt.Sprintf("%d", len(errMsg))},
-			[]byte(errMsg))
+			errMsg)
 	}
 
 	sendResponse(writer, resp)
