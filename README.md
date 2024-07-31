@@ -1,4 +1,4 @@
-[![progress-banner](https://backend.codecrafters.io/progress/http-server/c80fdc74-48a3-48ea-9b97-8f152d8dac57)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+![progress-banner](image.gif)
 
 This repo was created as part of ["Build Your Own HTTP server" Challenge](https://app.codecrafters.io/courses/http-server/overview).
 
