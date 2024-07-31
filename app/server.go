@@ -87,6 +87,7 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
+	// http method handling
 	if method == "GET" {
 		resp = handleGETMethod(path, reader)
 	} else if method == "POST" {
@@ -102,7 +103,7 @@ func handleConnection(conn net.Conn) {
 	sendResponse(writer, resp)
 }
 
-func sendResponse(writer *bufio.Writer, resp string) {
+func sendResponse(writer *bufio.Writer, resp string) { // sends response to client
 	_, err := writer.WriteString(resp)
 	if err != nil {
 		fmt.Println("Error writing stringResp:", err.Error())
@@ -154,6 +155,7 @@ func createHTTPResponse(statusCode int, headers map[string]string, requestBody s
 
 func handlePOSTMethod(path string, reader *bufio.Reader) string {
 
+	// get the fileName from path
 	fileName, hasPrefix := strings.CutPrefix(path, "/files/")
 	if !hasPrefix {
 		errStr := "invalidPath: " + path
@@ -163,12 +165,14 @@ func handlePOSTMethod(path string, reader *bufio.Reader) string {
 			errStr)
 	}
 
+	// extract req headers
 	headers, err := readReqHeaders(reader)
 	if err != nil {
 		fmt.Println(err)
 		return createErrResponse(err)
 	}
 
+	// extract reqBody length from headers
 	contentLengthStr, ok := headers["Content-Length"]
 	if !ok {
 		errStr := "content-length not found"
@@ -202,6 +206,7 @@ func handlePOSTMethod(path string, reader *bufio.Reader) string {
 	}
 	defer f.Close()
 
+	// write reqBody to file
 	_, err = f.Write(inpSlice)
 	if err != nil {
 		fmt.Println(err)
@@ -216,10 +221,20 @@ func handleGETMethod(path string, reader *bufio.Reader) string {
 	if path == "/" {
 		return createHTTPResponse(200, map[string]string{}, "")
 	} else if subPath, hasPrefix := strings.CutPrefix(path, "/echo/"); hasPrefix { // /echo/{str} should return str as response
-		return createHTTPResponse(200, map[string]string{
+		headers, err := readReqHeaders(reader)
+		if err != nil {
+			fmt.Println(err)
+			return createErrResponse(err)
+		}
+
+		respHeaders := map[string]string{
 			"Content-Type":   "text/plain",
-			"Content-Length": fmt.Sprintf("%d", len(subPath))},
-			subPath)
+			"Content-Length": fmt.Sprintf("%d", len(subPath))}
+		if headers["Accept-Encoding"] == "gzip" {
+			respHeaders["Content-Encoding"] = "gzip"
+		}
+
+		return createHTTPResponse(200, respHeaders, subPath)
 	} else if strings.HasSuffix(path, "/user-agent") { // /user-agent should return header-value of User-Agent as response
 
 		headers, err := readReqHeaders(reader)
