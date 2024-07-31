@@ -73,24 +73,31 @@ func handleConnection(conn net.Conn) {
 		var (
 			userAgent   string
 			prefixFound bool
+			lineStr     string
 		)
 		for {
 			line, _, err = reader.ReadLine()
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
 				fmt.Println(err)
 				return
 			}
 
-			userAgent, prefixFound = strings.CutPrefix(string(line), "User-Agent: ")
+			lineStr = string(line)
+			if lineStr == "" {
+				break
+			}
+			userAgent, prefixFound = strings.CutPrefix(lineStr, "User-Agent: ")
 			if prefixFound {
 				break
 			}
 		}
-		resp = fmt.Sprintf(
-			"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
+
+		if userAgent == "" {
+			resp = "HTTP/1.1 404 Not Found\r\n\r\n"
+		} else {
+			resp = fmt.Sprintf(
+				"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
+		}
 	} else {
 		resp = "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
