@@ -2,6 +2,8 @@ package http
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"os"
@@ -21,16 +23,25 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 		}
 
 		respHeaders := map[string]string{
-			ContentType:   PlainEncoding,
-			ContentLength: fmt.Sprintf("%d", len(subPath))}
+			ContentType: PlainEncoding}
 
 		encodingSchemes := strings.Split(headers[AcceptEncoding], ",")
 		for _, scheme := range encodingSchemes {
 			if strings.TrimSpace(scheme) == "gzip" {
 				respHeaders[ContentEncoding] = "gzip"
+				var buff bytes.Buffer
+				zw := gzip.NewWriter(&buff)
+				_, err = zw.Write([]byte(subPath))
+				if err != nil {
+					fmt.Println(err)
+					return CreateErrResponse(err)
+				}
+				subPath = buff.String()
 				break
 			}
 		}
+
+		respHeaders[ContentLength] = fmt.Sprintf("%d", len(subPath))
 
 		return CreateHTTPResponse(200, respHeaders, subPath)
 	} else if strings.HasSuffix(path, "/user-agent") { // /user-agent should return header-value of User-Agent as response
