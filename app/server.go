@@ -2,20 +2,22 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/vrv501/http-server/http"
+	"github.com/vrv501/http-server/signals"
 )
 
 var filesDir string
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
+	ctx := signals.SetupSignalHandler()
 
 	flag.StringVar(&filesDir, "directory", "", "directory name to search for files")
 	flag.Parse()
@@ -31,16 +33,35 @@ func main() {
 	}
 	defer l.Close()
 
-	var conn net.Conn
+	go func() {
+		<-ctx.Done()
+		l.Close()
+	}()
+
+	var (
+		wg   sync.WaitGroup
+		conn net.Conn
+	)
+
 	for {
 		conn, err = l.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				break
+			}
 			fmt.Println("Error accepting connection:", err.Error())
 			continue
 		}
 
-		go handleConnection(conn)
+		wg.Add(1)
+		go func() {
+			handleConnection(conn)
+			wg.Done()
+		}()
 	}
+
+	wg.Wait()
+	fmt.Println("server shutdown")
 }
 
 func handleConnection(conn net.Conn) {
