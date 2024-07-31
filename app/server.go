@@ -44,7 +44,7 @@ func handleConnection(conn net.Conn) {
 	fmt.Println("handling")
 
 	reader := bufio.NewReader(conn)
-	//writer := bufio.NewWriter(conn)
+	writer := bufio.NewWriter(conn)
 	var (
 		line []byte
 		err  error
@@ -61,16 +61,28 @@ func handleConnection(conn net.Conn) {
 
 	req := strings.Split(string(line), " ")
 	var resp string
-	if req[1] == "/" {
+
+	path := req[1]
+	if path == "/" {
 		resp = "HTTP/1.1 200 OK\r\n\r\n"
+	} else if strings.HasPrefix(path, "/echo/") {
+		subPath, _ := strings.CutPrefix(path, "/echo/")
+		length := len(subPath)
+		resp = fmt.Sprintf(
+			"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", length, subPath)
 	} else {
 		resp = "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
 
-	_, err = conn.Write([]byte(resp))
+	_, err = writer.WriteString(resp)
 	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
+		fmt.Println("Error writing stringResp: ", err.Error())
 		return
 	}
 
+	err = writer.Flush()
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+		return
+	}
 }
