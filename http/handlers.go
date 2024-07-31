@@ -44,7 +44,7 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 			}
 		}
 
-		respHeaders[ContentLength] = fmt.Sprintf("%d", len(subPath))
+		respHeaders[ContentLength] = fmt.Sprintf("%d", len(resp))
 
 		return CreateHTTPResponse(200, respHeaders, resp)
 	} else if strings.HasSuffix(path, "/user-agent") { // /user-agent should return header-value of User-Agent as response
