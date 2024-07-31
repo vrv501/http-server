@@ -23,8 +23,13 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 		respHeaders := map[string]string{
 			ContentType:   PlainEncoding,
 			ContentLength: fmt.Sprintf("%d", len(subPath))}
-		if headers[AcceptEncoding] == "gzip" {
-			respHeaders[ContentEncoding] = "gzip"
+
+		encodingSchemes := strings.Split(headers[AcceptEncoding], ",")
+		for _, scheme := range encodingSchemes {
+			if strings.TrimSpace(scheme) == "gzip" {
+				respHeaders[ContentEncoding] = "gzip"
+				break
+			}
 		}
 
 		return CreateHTTPResponse(200, respHeaders, subPath)
