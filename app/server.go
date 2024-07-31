@@ -3,17 +3,26 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"os"
 	"strings"
 )
 
+var filesDir string
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
 	// Uncomment this block to pass the first stage
+	flag.StringVar(&filesDir, "directory", "", "directory name to search for files")
+	flag.Parse()
+
+	if filesDir != "" {
+		os.Mkdir(filesDir, 0o777)
+	}
 
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
 	if err != nil {
@@ -117,7 +126,7 @@ func handleConnection(conn net.Conn) {
 			}
 		}
 	} else if fileName, hasPrefix := strings.CutPrefix(path, "/files/"); hasPrefix { // read file and send its content as response
-		file, err := os.ReadFile("/tmp/" + fileName)
+		file, err := os.ReadFile(filesDir + fileName)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				resp = createHTTPResponse(404, map[string]string{}, fmt.Sprintf("%s not found", fileName))
