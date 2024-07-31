@@ -67,9 +67,30 @@ func handleConnection(conn net.Conn) {
 		resp = "HTTP/1.1 200 OK\r\n\r\n"
 	} else if strings.HasPrefix(path, "/echo/") {
 		subPath, _ := strings.CutPrefix(path, "/echo/")
-		length := len(subPath)
 		resp = fmt.Sprintf(
-			"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", length, subPath)
+			"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(subPath), subPath)
+	} else if strings.HasSuffix(path, "/user-agent") {
+		var (
+			userAgent   string
+			prefixFound bool
+		)
+		for {
+			line, _, err = reader.ReadLine()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				fmt.Println(err)
+				return
+			}
+
+			userAgent, prefixFound = strings.CutPrefix(string(line), "User-Agent: ")
+			if prefixFound {
+				break
+			}
+		}
+		resp = fmt.Sprintf(
+			"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
 	} else {
 		resp = "HTTP/1.1 404 Not Found\r\n\r\n"
 	}
