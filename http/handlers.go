@@ -37,6 +37,8 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 					fmt.Println(err)
 					return CreateErrResponse(err)
 				}
+				zw.Close()
+
 				resp = buff.Bytes()
 				break
 			}
