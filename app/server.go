@@ -64,11 +64,12 @@ func handleConnection(conn net.Conn) {
 
 	path := req[1]
 	if path == "/" {
-		resp = "HTTP/1.1 200 OK\r\n\r\n"
+		resp = createHTTPResponse(200, map[string]string{}, "")
 	} else if strings.HasPrefix(path, "/echo/") {
 		subPath, _ := strings.CutPrefix(path, "/echo/")
-		resp = fmt.Sprintf(
-			"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(subPath), subPath)
+
+		resp = createHTTPResponse(200, map[string]string{"Content-Type": "text/plain",
+			"Content-Length": fmt.Sprintf("%d", len(subPath))}, subPath)
 	} else if strings.HasSuffix(path, "/user-agent") {
 		var (
 			userAgent   string
@@ -93,13 +94,13 @@ func handleConnection(conn net.Conn) {
 		}
 
 		if userAgent == "" {
-			resp = "HTTP/1.1 404 Not Found\r\n\r\n"
+			resp = createHTTPResponse(404, map[string]string{}, "")
 		} else {
-			resp = fmt.Sprintf(
-				"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
+			resp = createHTTPResponse(200, map[string]string{"Content-Type": "text/plain",
+				"Content-Length": fmt.Sprintf("%d", len(userAgent))}, userAgent)
 		}
 	} else {
-		resp = "HTTP/1.1 404 Not Found\r\n\r\n"
+		resp = createHTTPResponse(404, map[string]string{}, "")
 	}
 
 	_, err = writer.WriteString(resp)
@@ -113,4 +114,24 @@ func handleConnection(conn net.Conn) {
 		fmt.Println("Error writing to connection: ", err.Error())
 		return
 	}
+}
+
+func createHTTPResponse(statusCode int, headers map[string]string, requestBody string) string {
+
+	var headerStr strings.Builder
+	for k, v := range headers {
+		headerStr.WriteString(k)
+		headerStr.WriteString(": ")
+		headerStr.WriteString(v)
+		headerStr.WriteString("\r\n")
+	}
+
+	var statusCodeStr string
+	if statusCode == 200 {
+		statusCodeStr = "OK"
+	} else if statusCode == 404 {
+		statusCodeStr = "Not Found"
+	}
+
+	return fmt.Sprintf("HTTP/1.1 %d %s\r\n%s\r\n%s", statusCode, statusCodeStr, headerStr.String(), requestBody)
 }
