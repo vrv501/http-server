@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/codecrafters-io/http-server-starter-go/http"
+	"github.com/vrv501/http-server/http"
 )
 
 var filesDir string
