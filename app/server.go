@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -86,7 +87,7 @@ func handleConnection(conn net.Conn) {
 			line, _, err = reader.ReadLine()
 			if err != nil {
 				fmt.Println(err)
-				return
+				break
 			}
 
 			lineStr = string(line)
@@ -99,13 +100,39 @@ func handleConnection(conn net.Conn) {
 			}
 		}
 
-		if userAgent == "" {
-			resp = createHTTPResponse(404, map[string]string{}, "")
+		if err != nil {
+			errStr := err.Error()
+			resp = createHTTPResponse(500, map[string]string{
+				"Content-Type":   "text/plain",
+				"Content-Length": fmt.Sprintf("%d", len(errStr))},
+				errStr)
+		} else {
+			if userAgent == "" {
+				resp = createHTTPResponse(404, map[string]string{}, "")
+			} else {
+				resp = createHTTPResponse(200, map[string]string{
+					"Content-Type":   "text/plain",
+					"Content-Length": fmt.Sprintf("%d", len(userAgent))},
+					userAgent)
+			}
+		}
+	} else if fileName, hasPrefix := strings.CutPrefix(path, "/files/"); hasPrefix { // read file and send its content as response
+		file, err := os.ReadFile("/tmp/" + fileName)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				resp = createHTTPResponse(404, map[string]string{}, fmt.Sprintf("%s not found", fileName))
+			} else {
+				errStr := err.Error()
+				resp = createHTTPResponse(500, map[string]string{
+					"Content-Type":   "text/plain",
+					"Content-Length": fmt.Sprintf("%d", len(errStr))},
+					errStr)
+			}
 		} else {
 			resp = createHTTPResponse(200, map[string]string{
-				"Content-Type":   "text/plain",
-				"Content-Length": fmt.Sprintf("%d", len(userAgent))},
-				userAgent)
+				"Content-Type":   "application/octet-stream",
+				"Content-Length": fmt.Sprintf("%d", len(file)+1)},
+				string(file))
 		}
 	} else {
 		resp = createHTTPResponse(404, map[string]string{}, "")
@@ -135,10 +162,13 @@ func createHTTPResponse(statusCode int, headers map[string]string, requestBody s
 	}
 
 	var statusCodeStr string
-	if statusCode == 200 {
+	switch statusCode {
+	case 200:
 		statusCodeStr = "OK"
-	} else if statusCode == 404 {
+	case 404:
 		statusCodeStr = "Not Found"
+	case 500:
+		statusCodeStr = "Internal Server Error"
 	}
 
 	return fmt.Sprintf("HTTP/1.1 %d %s\r\n%s\r\n%s", statusCode, statusCodeStr, headerStr.String(), requestBody)
