@@ -129,7 +129,7 @@ func handleConnection(conn net.Conn) {
 		file, err := os.ReadFile(filesDir + fileName)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				resp = createHTTPResponse(404, map[string]string{}, fmt.Sprintf("%s not found", fileName))
+				resp = createHTTPResponse(404, map[string]string{}, "")
 			} else {
 				errStr := err.Error()
 				resp = createHTTPResponse(500, map[string]string{
@@ -140,7 +140,7 @@ func handleConnection(conn net.Conn) {
 		} else {
 			resp = createHTTPResponse(200, map[string]string{
 				"Content-Type":   "application/octet-stream",
-				"Content-Length": fmt.Sprintf("%d", len(file)+1)},
+				"Content-Length": fmt.Sprintf("%d", len(file))},
 				string(file))
 		}
 	} else {
