@@ -14,7 +14,7 @@ import (
 func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string {
 
 	if path == "/" {
-		return CreateHTTPResponse(200, map[string]string{}, "")
+		return CreateHTTPResponse(200, map[string]string{}, []byte{})
 	} else if subPath, hasPrefix := strings.CutPrefix(path, "/echo/"); hasPrefix { // /echo/{str} should return str as response
 		headers, err := readReqHeaders(reader)
 		if err != nil {
@@ -25,6 +25,7 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 		respHeaders := map[string]string{
 			ContentType: PlainEncoding}
 
+		resp := []byte(subPath)
 		encodingSchemes := strings.Split(headers[AcceptEncoding], ",")
 		for _, scheme := range encodingSchemes {
 			if strings.TrimSpace(scheme) == "gzip" {
@@ -36,14 +37,14 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 					fmt.Println(err)
 					return CreateErrResponse(err)
 				}
-				subPath = buff.String()
+				resp = buff.Bytes()
 				break
 			}
 		}
 
 		respHeaders[ContentLength] = fmt.Sprintf("%d", len(subPath))
 
-		return CreateHTTPResponse(200, respHeaders, subPath)
+		return CreateHTTPResponse(200, respHeaders, resp)
 	} else if strings.HasSuffix(path, "/user-agent") { // /user-agent should return header-value of User-Agent as response
 
 		headers, err := readReqHeaders(reader)
@@ -54,18 +55,18 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 
 		userAgent, ok := headers[UserAgent]
 		if !ok {
-			return CreateHTTPResponse(404, map[string]string{}, "")
+			return CreateHTTPResponse(404, map[string]string{}, []byte{})
 		}
 
 		return CreateHTTPResponse(200, map[string]string{
 			ContentType:   PlainEncoding,
 			ContentLength: fmt.Sprintf("%d", len(userAgent))},
-			userAgent)
+			[]byte(userAgent))
 	} else if fileName, hasPrefix := strings.CutPrefix(path, "/files/"); hasPrefix { // read file and send its content as response
 		file, err := os.ReadFile(filesDir + fileName)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return CreateHTTPResponse(404, map[string]string{}, "")
+				return CreateHTTPResponse(404, map[string]string{}, []byte{})
 			}
 
 			fmt.Println(err)
@@ -75,10 +76,10 @@ func HandleGETMethod(filesDir string, path string, reader *bufio.Reader) string 
 		return CreateHTTPResponse(200, map[string]string{
 			ContentType:   OctetStreamEncoding,
 			ContentLength: fmt.Sprintf("%d", len(file))},
-			string(file))
+			file)
 	}
 
-	return CreateHTTPResponse(404, map[string]string{}, "")
+	return CreateHTTPResponse(404, map[string]string{}, []byte{})
 }
 
 func HandlePOSTMethod(filesDir string, path string, reader *bufio.Reader) string {
@@ -90,7 +91,7 @@ func HandlePOSTMethod(filesDir string, path string, reader *bufio.Reader) string
 		return CreateHTTPResponse(400, map[string]string{
 			ContentType:   PlainEncoding,
 			ContentLength: fmt.Sprintf("%d", len(errStr))},
-			errStr)
+			[]byte(errStr))
 	}
 
 	// extract req headers
@@ -107,7 +108,7 @@ func HandlePOSTMethod(filesDir string, path string, reader *bufio.Reader) string
 		return CreateHTTPResponse(400, map[string]string{
 			ContentType:   PlainEncoding,
 			ContentLength: fmt.Sprintf("%d", len(errStr))},
-			errStr)
+			[]byte(errStr))
 	}
 
 	contentLength, err := strconv.ParseUint(contentLengthStr, 10, 64)
@@ -116,7 +117,7 @@ func HandlePOSTMethod(filesDir string, path string, reader *bufio.Reader) string
 		return CreateHTTPResponse(400, map[string]string{
 			ContentType:   PlainEncoding,
 			ContentLength: fmt.Sprintf("%d", len(errStr))},
-			errStr)
+			[]byte(errStr))
 	}
 
 	inpSlice := make([]byte, contentLength)
@@ -141,5 +142,5 @@ func HandlePOSTMethod(filesDir string, path string, reader *bufio.Reader) string
 		return CreateErrResponse(err)
 	}
 
-	return CreateHTTPResponse(201, map[string]string{}, "")
+	return CreateHTTPResponse(201, map[string]string{}, []byte{})
 }
